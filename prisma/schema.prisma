@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Settings {
+  id                    Int      @id @default(autoincrement())
+  route                 String   @unique
+  normal_price_per_kg   Float
+  over_5kg_price_per_kg Float    @default(0)
+  pickup_discount_per_kg Float   @default(0)
+  enable_over_5kg_price Boolean  @default(false)
+  enable_pickup_discount Boolean @default(false)
+  krw_bank_account      String
+  idr_bank_account      String
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
+
+model Invoice {
+  id                     String               @id @default(cuid())
+  invoice_number         String               @unique
+  customer_name          String
+  route                  String
+  weight_kg              Float
+  item_count             Int
+  pickup_or_delivery     String               // "pickup" | "delivery"
+  base_price_per_kg      Float
+  final_price_per_kg     Float
+  pickup_discount_per_kg Float                @default(0)
+  shipping_subtotal_krw  Float
+  total_krw              Float
+  total_idr              Float                @default(0)
+  payment_status         String               @default("Unpaid") // "Unpaid", "Paid", "Partially Paid"
+  delivery_status        String               @default("Pending") // "Pending", "Arrived", "Sent", "Picked up", "Completed"
+  customer_note          String?
+  internal_label_color   String?
+  show_label_to_customer Boolean              @default(false)
+  created_at             DateTime             @default(now())
+  updated_at             DateTime             @updatedAt
+  extra_charges          InvoiceExtraCharge[]
+}
+
+model InvoiceExtraCharge {
+  id         String   @id @default(cuid())
+  invoice_id String
+  invoice    Invoice  @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  name       String
+  currency   String   // "KRW" | "IDR"
+  amount     Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
