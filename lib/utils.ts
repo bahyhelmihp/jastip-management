@@ -184,7 +184,7 @@ export function generateTotalanText(
   lines.push('');
   if (input.pickupOrDelivery === 'pickup') {
     lines.push(
-      'Untuk pengambilan barang bisa janjian lebih lanjut di chat ini ya kak. Untuk pelunasan, bisa dilakukan sebelum pickup ya (ongkir lokal dibayarkan terpisah setelah resi keluar) 🙏'
+      'Untuk pengambilan barang bisa janjian lebih lanjut di chat ini ya kak. Untuk pelunasan, bisa dilakukan sebelum pickup ya 🙏'
     );
   } else {
     lines.push(
