@@ -300,7 +300,29 @@ export default function InvoiceDashboard() {
     const unpaidCount = invoices.filter((i) => i.payment_status === 'Unpaid').length;
     const sumKRW = invoices.reduce((acc, i) => acc + i.total_krw, 0);
     const sumIDR = invoices.reduce((acc, i) => acc + i.total_idr, 0);
-    return { totalCount, unpaidCount, sumKRW, sumIDR };
+
+    // Delivery Status Metrics
+    const pendingDeliveryCount = invoices.filter(
+      (i) => i.delivery_status === 'Pending' || !i.delivery_status
+    ).length;
+    const arrivedCount = invoices.filter((i) => i.delivery_status === 'Arrived').length;
+    const sentCount = invoices.filter((i) => i.delivery_status === 'Sent').length;
+    const pickedUpCount = invoices.filter((i) => i.delivery_status === 'Picked up').length;
+    const completedCount = invoices.filter((i) => i.delivery_status === 'Completed').length;
+    const dispatchedCount = sentCount + pickedUpCount + completedCount;
+
+    return {
+      totalCount,
+      unpaidCount,
+      sumKRW,
+      sumIDR,
+      pendingDeliveryCount,
+      arrivedCount,
+      sentCount,
+      pickedUpCount,
+      completedCount,
+      dispatchedCount,
+    };
   }, [invoices]);
 
   return (
@@ -323,45 +345,178 @@ export default function InvoiceDashboard() {
       </div>
 
       {/* Summary Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4">
-          <div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
-            <Package className="w-6 h-6" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        
+        {/* Total Invoice */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Invoice</span>
+            <div className="p-2 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
+              <Package className="w-5 h-5" />
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase">Total Invoice</span>
-            <span className="text-xl font-bold text-white font-mono">{summary.totalCount}</span>
-          </div>
-        </div>
-
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4">
-          <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase">Unpaid (Belum Bayar)</span>
-            <span className="text-xl font-bold text-rose-400 font-mono">{summary.unpaidCount}</span>
+          <div className="mt-3">
+            <span className="text-2xl font-extrabold text-white font-mono">{summary.totalCount}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Semua invoice</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4">
-          <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
-            <DollarSign className="w-6 h-6" />
+        {/* Unpaid */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Belum Bayar</span>
+            <div className="p-2 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase">Total Omzet KRW</span>
-            <span className="text-lg font-bold text-sky-400 font-mono">{formatKRW(summary.sumKRW)}</span>
+          <div className="mt-3">
+            <span className="text-2xl font-extrabold text-rose-400 font-mono">{summary.unpaidCount}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Status Unpaid</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4">
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-            <DollarSign className="w-6 h-6" />
+        {/* Belum Kirim/Pickup */}
+        <div 
+          onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Pending' ? 'ALL' : 'Pending')}
+          className={`bg-slate-900/80 border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+            deliveryStatusFilter === 'Pending' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-800 hover:border-amber-500/50'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Belum Kirim/Pickup</span>
+            <div className="p-2 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase">Total Omzet IDR</span>
-            <span className="text-lg font-bold text-emerald-400 font-mono">{formatIDR(summary.sumIDR)}</span>
+          <div className="mt-3">
+            <span className="text-2xl font-extrabold text-amber-400 font-mono">{summary.pendingDeliveryCount}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Paket Pending</span>
           </div>
+        </div>
+
+        {/* Dispatched/Picked Up/Completed */}
+        <div 
+          onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent' ? 'ALL' : 'Sent')}
+          className={`bg-slate-900/80 border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+            deliveryStatusFilter === 'Sent' || deliveryStatusFilter === 'Picked up' || deliveryStatusFilter === 'Completed'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+              : 'border-slate-800 hover:border-emerald-500/50'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sudah Kirim/Pickup</span>
+            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+              <Truck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-extrabold text-emerald-400 font-mono">{summary.dispatchedCount}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Sent, Picked up, Selesai</span>
+          </div>
+        </div>
+
+        {/* Total KRW */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Omzet KRW</span>
+            <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-lg font-extrabold text-sky-400 font-mono">{formatKRW(summary.sumKRW)}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Total tagihan KRW</span>
+          </div>
+        </div>
+
+        {/* Total IDR */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Omzet IDR</span>
+            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-lg font-extrabold text-emerald-400 font-mono">{formatIDR(summary.sumIDR)}</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Total tagihan IDR</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Detailed Delivery Status Tracker Quick Filter Bar */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 text-xs font-bold text-slate-300 uppercase tracking-wider">
+          <Truck className="w-4 h-4 text-sky-400" />
+          <span>Tracking Status Kirim Paket:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setDeliveryStatusFilter('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'ALL'
+                ? 'bg-slate-100 text-slate-900 border-white shadow-md'
+                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+            }`}
+          >
+            Semua ({summary.totalCount})
+          </button>
+
+          <button
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Pending' ? 'ALL' : 'Pending')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'Pending'
+                ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md'
+                : 'bg-amber-950/40 text-amber-400 border-amber-800/60 hover:bg-amber-950/70'
+            }`}
+          >
+            🕒 Pending ({summary.pendingDeliveryCount})
+          </button>
+
+          <button
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Arrived' ? 'ALL' : 'Arrived')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'Arrived'
+                ? 'bg-purple-500 text-slate-950 font-bold border-purple-400 shadow-md'
+                : 'bg-purple-950/40 text-purple-300 border-purple-800/60 hover:bg-purple-950/70'
+            }`}
+          >
+            📦 Tiba di Gudang ({summary.arrivedCount})
+          </button>
+
+          <button
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent' ? 'ALL' : 'Sent')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'Sent'
+                ? 'bg-indigo-500 text-white font-bold border-indigo-400 shadow-md'
+                : 'bg-indigo-950/40 text-indigo-300 border-indigo-800/60 hover:bg-indigo-950/70'
+            }`}
+          >
+            🚚 Dikirim / Sent ({summary.sentCount})
+          </button>
+
+          <button
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Picked up' ? 'ALL' : 'Picked up')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'Picked up'
+                ? 'bg-sky-500 text-slate-950 font-bold border-sky-400 shadow-md'
+                : 'bg-sky-950/40 text-sky-300 border-sky-800/60 hover:bg-sky-950/70'
+            }`}
+          >
+            🤝 Diambil / Picked up ({summary.pickedUpCount})
+          </button>
+
+          <button
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Completed' ? 'ALL' : 'Completed')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              deliveryStatusFilter === 'Completed'
+                ? 'bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-md'
+                : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-950/70'
+            }`}
+          >
+            ✅ Selesai / Completed ({summary.completedCount})
+          </button>
         </div>
       </div>
 
