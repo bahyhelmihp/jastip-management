@@ -132,6 +132,7 @@ export default function SettingsPage() {
                     type="number"
                     value={setting.normal_price_per_kg}
                     onChange={(e) => handleChange(idx, 'normal_price_per_kg', Number(e.target.value))}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
                     required
                   />
@@ -163,6 +164,7 @@ export default function SettingsPage() {
                     value={setting.over_5kg_price_per_kg}
                     disabled={!setting.enable_over_5kg_price}
                     onChange={(e) => handleChange(idx, 'over_5kg_price_per_kg', Number(e.target.value))}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className={`w-full bg-slate-950 border rounded-xl px-4 py-2.5 text-white font-medium outline-none transition-opacity ${
                       setting.enable_over_5kg_price
                         ? 'border-slate-700 focus:ring-2 focus:ring-sky-500'
@@ -197,6 +199,7 @@ export default function SettingsPage() {
                     value={setting.pickup_discount_per_kg}
                     disabled={!setting.enable_pickup_discount}
                     onChange={(e) => handleChange(idx, 'pickup_discount_per_kg', Number(e.target.value))}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className={`w-full bg-slate-950 border rounded-xl px-4 py-2.5 text-white font-medium outline-none transition-opacity ${
                       setting.enable_pickup_discount
                         ? 'border-slate-700 focus:ring-2 focus:ring-sky-500'

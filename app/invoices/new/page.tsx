@@ -366,6 +366,7 @@ export default function CreateInvoicePage() {
                     min="0"
                     value={weightKg}
                     onChange={(e) => setWeightKg(e.target.value)}
+                    onWheel={(e) => e.currentTarget.blur()}
                     placeholder="misal: 5.964"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
                     required
@@ -389,6 +390,7 @@ export default function CreateInvoicePage() {
                   min="1"
                   value={itemCount}
                   onChange={(e) => setItemCount(e.target.value)}
+                  onWheel={(e) => e.currentTarget.blur()}
                   placeholder="misal: 32"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
                   required
@@ -513,6 +515,7 @@ export default function CreateInvoicePage() {
                       placeholder="Harga"
                       value={item.amount || ''}
                       onChange={(e) => updateExtraCharge(idx, 'amount', Number(e.target.value))}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full sm:w-32 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-sky-500 outline-none"
                     />
 
