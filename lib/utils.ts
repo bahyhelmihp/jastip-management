@@ -183,13 +183,14 @@ export function generateTotalanText(
 
   lines.push('');
   if (input.pickupOrDelivery === 'pickup') {
-    lines.push('Untuk pengambilan barang di Korea bisa janjian lebih lanjut di chat ini ya kak 🙏');
+    lines.push(
+      'Untuk pengambilan barang di Korea bisa janjian lebih lanjut di chat ini ya kak 🙏 Untuk pelunasan, bisa dilakukan sebelum pickup ya (ongkir lokal dibayarkan terpisah setelah resi keluar)'
+    );
   } else {
-    lines.push('Untuk pengiriman, bisa diinfokan alamat kirimnya ya');
+    lines.push(
+      'Untuk pengiriman, bisa diinfokan alamat kirimnya ya. Untuk pelunasan, bisa dilakukan sebelum barang dikirim ya (ongkir lokal dibayarkan terpisah setelah resi keluar)'
+    );
   }
-
-  lines.push('');
-  lines.push('Untuk pelunasan, bisa dilakukan sebelum pickup atau barang dikirim ya (ongkir lokal dibayarkan terpisah setelah resi keluar)');
 
   return lines.join('\n');
 }
