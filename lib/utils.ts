@@ -182,11 +182,14 @@ export function generateTotalanText(
   lines.push(`Harga di atas berdasarkan asumsi ${methodLabel} ya, jika ingin ada perubahan metode, bisa dikabari`);
 
   lines.push('');
-  if (input.route.includes('ICN → CGK') || input.route.includes('ICN -> CGK')) {
-    lines.push('Untuk ongkir lokal nanti dibayarkan saat resi post/pengiriman lokal sudah kami issue yaa, atau kalau mau pickup silahkan dikabari, terimakasih 🙏');
+  if (input.pickupOrDelivery === 'pickup') {
+    lines.push('Untuk pengambilan barang di Korea bisa janjian lebih lanjut di chat ini ya kak 🙏');
   } else {
-    lines.push('Untuk pengambilan barang di Korea nanti akan kami infokan kembali ya kak. Terima kasih 🙏');
+    lines.push('Untuk pengiriman, bisa diinfokan alamat kirimnya ya');
   }
+
+  lines.push('');
+  lines.push('Untuk pelunasan, bisa dilakukan sebelum pickup atau barang dikirim ya (ongkir lokal dibayarkan terpisah setelah resi keluar)');
 
   return lines.join('\n');
 }
