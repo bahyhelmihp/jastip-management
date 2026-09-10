@@ -126,7 +126,7 @@ export function generateTotalanText(
   const weightStr = formatWeight(input.weightKg);
   const lines: string[] = [];
 
-  lines.push('Halo kak, barangnya sudah kami terima ya. Berikut totalannya ya kak.');
+  lines.push('Halo kak, barangnya sudah siap dipickup hari ini atau dikirim besok ya. Berikut totalannya ya kak.');
   lines.push('');
   lines.push('Nanti silakan bisa ditimbang ulang saat barang sudah diterima. Jika ada selisih berat, insyaAllah akan kami refund sesuai selisihnya ya kak.');
   lines.push('');
@@ -176,6 +176,10 @@ export function generateTotalanText(
     lines.push('');
     lines.push(input.idrBankAccount.trim());
   }
+
+  lines.push('');
+  const methodLabel = input.pickupOrDelivery === 'pickup' ? 'Pickup' : 'Kirim';
+  lines.push(`Harga di atas berdasarkan asumsi ${methodLabel} ya, jika ingin ada perubahan metode, bisa dikabari`);
 
   lines.push('');
   if (input.route.includes('ICN → CGK') || input.route.includes('ICN -> CGK')) {
