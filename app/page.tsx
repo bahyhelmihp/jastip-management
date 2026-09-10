@@ -317,9 +317,8 @@ export default function InvoiceDashboard() {
 
     // Delivery Status Metrics
     const pendingDeliveryCount = invoices.filter(
-      (i) => i.delivery_status === 'Pending' || !i.delivery_status
+      (i) => i.delivery_status === 'Pending' || i.delivery_status === 'Arrived' || !i.delivery_status
     ).length;
-    const arrivedCount = invoices.filter((i) => i.delivery_status === 'Arrived').length;
     const sentCount = invoices.filter((i) => i.delivery_status === 'Sent').length;
     const pickedUpCount = invoices.filter((i) => i.delivery_status === 'Picked up').length;
     const completedCount = invoices.filter((i) => i.delivery_status === 'Completed').length;
@@ -331,7 +330,6 @@ export default function InvoiceDashboard() {
       sumKRW,
       sumIDR,
       pendingDeliveryCount,
-      arrivedCount,
       sentCount,
       pickedUpCount,
       completedCount,
@@ -485,18 +483,7 @@ export default function InvoiceDashboard() {
                 : 'bg-amber-950/40 text-amber-400 border-amber-800/60 hover:bg-amber-950/70'
             }`}
           >
-            🕒 Pending ({summary.pendingDeliveryCount})
-          </button>
-
-          <button
-            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Arrived' ? 'ALL' : 'Arrived')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              deliveryStatusFilter === 'Arrived'
-                ? 'bg-purple-500 text-slate-950 font-bold border-purple-400 shadow-md'
-                : 'bg-purple-950/40 text-purple-300 border-purple-800/60 hover:bg-purple-950/70'
-            }`}
-          >
-            📦 Tiba di Gudang ({summary.arrivedCount})
+            🕒 Pending / Belum Kirim ({summary.pendingDeliveryCount})
           </button>
 
           <button
@@ -585,11 +572,10 @@ export default function InvoiceDashboard() {
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none"
             >
               <option value="ALL">Semua Status Pengiriman</option>
-              <option value="Pending">Pending</option>
-              <option value="Arrived">Arrived</option>
-              <option value="Sent">Sent</option>
-              <option value="Picked up">Picked up</option>
-              <option value="Completed">Completed</option>
+              <option value="Pending">Pending (Belum Kirim/Pickup)</option>
+              <option value="Sent">Sent (Dikirim)</option>
+              <option value="Picked up">Picked up (Diambil)</option>
+              <option value="Completed">Completed (Selesai)</option>
             </select>
           </div>
 

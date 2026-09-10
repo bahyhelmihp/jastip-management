@@ -568,8 +568,7 @@ export default function CreateInvoicePage() {
                   onChange={(e) => setDeliveryStatus(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
                 >
-                  <option value="Pending">Pending</option>
-                  <option value="Arrived">Arrived (Tiba di Gudang)</option>
+                  <option value="Pending">Pending (Belum Kirim/Pickup)</option>
                   <option value="Sent">Sent (Dikirim)</option>
                   <option value="Picked up">Picked up (Diambil)</option>
                   <option value="Completed">Completed (Selesai)</option>
