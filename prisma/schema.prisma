@@ -15,6 +15,7 @@ model Settings {
   pickup_discount_per_kg Float   @default(0)
   enable_over_5kg_price Boolean  @default(false)
   enable_pickup_discount Boolean @default(false)
+  exchange_rate_krw_to_idr Float @default(11.5)
   krw_bank_account      String
   idr_bank_account      String
   created_at            DateTime @default(now())
@@ -22,27 +23,29 @@ model Settings {
 }
 
 model Invoice {
-  id                     String               @id @default(cuid())
-  invoice_number         String               @unique
-  customer_name          String
-  route                  String
-  weight_kg              Float
-  item_count             Int
-  pickup_or_delivery     String               // "pickup" | "delivery"
-  base_price_per_kg      Float
-  final_price_per_kg     Float
-  pickup_discount_per_kg Float                @default(0)
-  shipping_subtotal_krw  Float
-  total_krw              Float
-  total_idr              Float                @default(0)
-  payment_status         String               @default("Unpaid") // "Unpaid", "Paid", "Partially Paid"
-  delivery_status        String               @default("Pending") // "Pending", "Arrived", "Sent", "Picked up", "Completed"
-  customer_note          String?
-  internal_label_color   String?
-  show_label_to_customer Boolean              @default(false)
-  created_at             DateTime             @default(now())
-  updated_at             DateTime             @updatedAt
-  extra_charges          InvoiceExtraCharge[]
+  id                          String               @id @default(cuid())
+  invoice_number              String               @unique
+  customer_name               String
+  route                       String
+  weight_kg                   Float
+  item_count                  Int
+  pickup_or_delivery          String               // "pickup" | "delivery"
+  base_price_per_kg           Float
+  final_price_per_kg          Float
+  pickup_discount_per_kg      Float                @default(0)
+  shipping_subtotal_krw       Float
+  total_krw                   Float
+  total_idr                   Float                @default(0)
+  payment_currency_preference String               @default("ORIGINAL") // "ORIGINAL", "FULL_KRW", "FULL_IDR"
+  exchange_rate_used          Float                @default(11.5)
+  payment_status              String               @default("Unpaid") // "Unpaid", "Paid", "Partially Paid"
+  delivery_status             String               @default("Pending") // "Pending", "Arrived", "Sent", "Picked up", "Completed"
+  customer_note               String?
+  internal_label_color        String?
+  show_label_to_customer      Boolean              @default(false)
+  created_at                  DateTime             @default(now())
+  updated_at                  DateTime             @updatedAt
+  extra_charges               InvoiceExtraCharge[]
 }
 
 model InvoiceExtraCharge {

@@ -33,6 +33,7 @@ interface RouteSetting {
   pickup_discount_per_kg: number;
   enable_over_5kg_price: boolean;
   enable_pickup_discount: boolean;
+  exchange_rate_krw_to_idr?: number;
   krw_bank_account: string;
   idr_bank_account: string;
 }
@@ -50,6 +51,7 @@ export default function CreateInvoicePage() {
   const [itemCount, setItemCount] = useState<string>('1');
   const [pickupOrDelivery, setPickupOrDelivery] = useState<'pickup' | 'delivery'>('delivery');
   const [applyPickupDiscount, setApplyPickupDiscount] = useState(true);
+  const [paymentCurrencyPreference, setPaymentCurrencyPreference] = useState<'ORIGINAL' | 'FULL_KRW' | 'FULL_IDR'>('ORIGINAL');
   const [customerNote, setCustomerNote] = useState('');
   const [internalLabelColor, setInternalLabelColor] = useState('');
   const [showLabelToCustomer, setShowLabelToCustomer] = useState(false);
@@ -126,6 +128,8 @@ export default function CreateInvoicePage() {
       pickupDiscountPerKg: currentSetting.pickup_discount_per_kg,
       enableOver5kgPrice: currentSetting.enable_over_5kg_price,
       enablePickupDiscount: currentSetting.enable_pickup_discount,
+      exchangeRateKRWtoIDR: currentSetting.exchange_rate_krw_to_idr || 11.5,
+      paymentCurrencyPreference,
       krwBankAccount: currentSetting.krw_bank_account,
       idrBankAccount: currentSetting.idr_bank_account,
     };
@@ -136,6 +140,7 @@ export default function CreateInvoicePage() {
     parsedItems,
     pickupOrDelivery,
     applyPickupDiscount,
+    paymentCurrencyPreference,
     extraCharges,
     currentSetting,
   ]);
@@ -230,6 +235,7 @@ export default function CreateInvoicePage() {
           item_count: parsedItems,
           pickup_or_delivery: pickupOrDelivery,
           apply_pickup_discount: applyPickupDiscount,
+          payment_currency_preference: paymentCurrencyPreference,
           customer_note: customerNote,
           internal_label_color: internalLabelColor,
           show_label_to_customer: showLabelToCustomer,
@@ -658,6 +664,72 @@ export default function CreateInvoicePage() {
                     <span className="text-xl font-extrabold text-emerald-400 font-mono">
                       {formatIDR(calcResult.totalIDR)}
                     </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Currency Preference Selector */}
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <label className="block text-xs font-bold uppercase text-slate-400">
+                  Opsi Pembayaran Customer:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCurrencyPreference('ORIGINAL')}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                      paymentCurrencyPreference === 'ORIGINAL'
+                        ? 'bg-sky-500 text-slate-950 font-bold shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Original
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCurrencyPreference('FULL_IDR')}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                      paymentCurrencyPreference === 'FULL_IDR'
+                        ? 'bg-emerald-500 text-slate-950 font-bold shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Full IDR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCurrencyPreference('FULL_KRW')}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                      paymentCurrencyPreference === 'FULL_KRW'
+                        ? 'bg-indigo-500 text-white font-bold shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Full KRW
+                  </button>
+                </div>
+
+                {paymentCurrencyPreference === 'FULL_IDR' && (
+                  <div className="bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-xl text-xs space-y-1">
+                    <div className="flex justify-between items-center font-bold text-emerald-400">
+                      <span>Total Full IDR:</span>
+                      <span className="text-sm font-mono font-extrabold">{formatIDR(calcResult.fullIDRTotal)}</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-300/80">
+                      Rate KRW → IDR: 1 KRW = Rp{calcResult.rateKRWtoIDR} (Google +0.3)
+                    </p>
+                  </div>
+                )}
+
+                {paymentCurrencyPreference === 'FULL_KRW' && (
+                  <div className="bg-indigo-950/40 border border-indigo-500/30 p-3 rounded-xl text-xs space-y-1">
+                    <div className="flex justify-between items-center font-bold text-indigo-300">
+                      <span>Total Full KRW:</span>
+                      <span className="text-sm font-mono font-extrabold">{formatKRW(calcResult.fullKRWTotal)}</span>
+                    </div>
+                    <p className="text-[11px] text-indigo-300/80">
+                      Rate IDR → KRW: 1 KRW = Rp{calcResult.rateIDRtoKRW} (Google -0.3)
+                    </p>
                   </div>
                 )}
               </div>

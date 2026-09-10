@@ -24,6 +24,7 @@ import {
   formatWeight,
   formatKRW,
   formatIDR,
+  calculateInvoice,
   generateTotalanText,
 } from '@/lib/utils';
 import { generateInvoicePDF } from '@/lib/pdf';
@@ -49,6 +50,8 @@ interface Invoice {
   shipping_subtotal_krw: number;
   total_krw: number;
   total_idr: number;
+  payment_currency_preference?: string;
+  exchange_rate_used?: number;
   payment_status: string;
   delivery_status: string;
   customer_note?: string | null;
@@ -214,41 +217,27 @@ export default function InvoiceDashboard() {
       idr_bank_account: `BCA 8410928123\na.n. Putra Bahy Helmi Hartoyo`,
     };
 
-    const text = generateTotalanText(
-      {
-        customerName: inv.customer_name,
-        route: inv.route,
-        weightKg: inv.weight_kg,
-        itemCount: inv.item_count,
-        pickupOrDelivery: inv.pickup_or_delivery as any,
-        applyPickupDiscount: inv.pickup_discount_per_kg > 0,
-        extraCharges: inv.extra_charges || [],
-        normalPricePerKg: inv.base_price_per_kg,
-        over5kgPricePerKg: 0,
-        pickupDiscountPerKg: inv.pickup_discount_per_kg,
-        enableOver5kgPrice: false,
-        enablePickupDiscount: inv.pickup_discount_per_kg > 0,
-        krwBankAccount: setting.krw_bank_account,
-        idrBankAccount: setting.idr_bank_account,
-      },
-      {
-        basePricePerKg: inv.base_price_per_kg,
-        pickupDiscountApplied: inv.pickup_discount_per_kg,
-        isPickupDiscountActive: inv.pickup_discount_per_kg > 0,
-        finalPricePerKg: inv.final_price_per_kg,
-        shippingSubtotalKRW: inv.shipping_subtotal_krw,
-        extraKRW: (inv.extra_charges || []).filter((ec) => ec.currency === 'KRW'),
-        extraIDR: (inv.extra_charges || []).filter((ec) => ec.currency === 'IDR'),
-        totalExtraKRW: (inv.extra_charges || [])
-          .filter((ec) => ec.currency === 'KRW')
-          .reduce((sum, item) => sum + item.amount, 0),
-        totalExtraIDR: (inv.extra_charges || [])
-          .filter((ec) => ec.currency === 'IDR')
-          .reduce((sum, item) => sum + item.amount, 0),
-        totalKRW: inv.total_krw,
-        totalIDR: inv.total_idr,
-      }
-    );
+    const calcInput = {
+      customerName: inv.customer_name,
+      route: inv.route,
+      weightKg: inv.weight_kg,
+      itemCount: inv.item_count,
+      pickupOrDelivery: inv.pickup_or_delivery as any,
+      applyPickupDiscount: inv.pickup_discount_per_kg > 0,
+      extraCharges: inv.extra_charges || [],
+      normalPricePerKg: inv.base_price_per_kg,
+      over5kgPricePerKg: 0,
+      pickupDiscountPerKg: inv.pickup_discount_per_kg,
+      enableOver5kgPrice: false,
+      enablePickupDiscount: inv.pickup_discount_per_kg > 0,
+      exchangeRateKRWtoIDR: inv.exchange_rate_used || 11.5,
+      paymentCurrencyPreference: (inv.payment_currency_preference as any) || 'ORIGINAL',
+      krwBankAccount: setting.krw_bank_account,
+      idrBankAccount: setting.idr_bank_account,
+    };
+
+    const calcResult = calculateInvoice(calcInput);
+    const text = generateTotalanText(calcInput, calcResult);
 
     try {
       await navigator.clipboard.writeText(text);
@@ -267,6 +256,27 @@ export default function InvoiceDashboard() {
       idr_bank_account: `BCA 8410928123\na.n. Putra Bahy Helmi Hartoyo`,
     };
 
+    const calcInput = {
+      customerName: inv.customer_name,
+      route: inv.route,
+      weightKg: inv.weight_kg,
+      itemCount: inv.item_count,
+      pickupOrDelivery: inv.pickup_or_delivery as any,
+      applyPickupDiscount: inv.pickup_discount_per_kg > 0,
+      extraCharges: inv.extra_charges || [],
+      normalPricePerKg: inv.base_price_per_kg,
+      over5kgPricePerKg: 0,
+      pickupDiscountPerKg: inv.pickup_discount_per_kg,
+      enableOver5kgPrice: false,
+      enablePickupDiscount: inv.pickup_discount_per_kg > 0,
+      exchangeRateKRWtoIDR: inv.exchange_rate_used || 11.5,
+      paymentCurrencyPreference: (inv.payment_currency_preference as any) || 'ORIGINAL',
+      krwBankAccount: setting.krw_bank_account,
+      idrBankAccount: setting.idr_bank_account,
+    };
+
+    const calcResult = calculateInvoice(calcInput);
+
     const doc = generateInvoicePDF({
       invoiceNumber: inv.invoice_number,
       createdAt: inv.created_at,
@@ -283,6 +293,10 @@ export default function InvoiceDashboard() {
       totalIDR: inv.total_idr,
       paymentStatus: inv.payment_status,
       deliveryStatus: inv.delivery_status,
+      paymentCurrencyPreference: inv.payment_currency_preference,
+      exchangeRateUsed: inv.exchange_rate_used,
+      fullIDRTotal: calcResult.fullIDRTotal,
+      fullKRWTotal: calcResult.fullKRWTotal,
       customerNote: inv.customer_note,
       internalLabelColor: inv.internal_label_color,
       showLabelToCustomer: inv.show_label_to_customer,

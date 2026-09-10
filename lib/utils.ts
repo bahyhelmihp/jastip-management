@@ -47,6 +47,8 @@ export interface InvoiceCalculationInput {
   pickupDiscountPerKg: number;
   enableOver5kgPrice: boolean;
   enablePickupDiscount: boolean;
+  exchangeRateKRWtoIDR?: number; // Base Google rate e.g. 11.5
+  paymentCurrencyPreference?: 'ORIGINAL' | 'FULL_KRW' | 'FULL_IDR';
   krwBankAccount?: string;
   idrBankAccount?: string;
 }
@@ -63,6 +65,11 @@ export interface InvoiceCalculationResult {
   totalExtraIDR: number;
   totalKRW: number;
   totalIDR: number;
+  exchangeRateUsed: number;
+  rateKRWtoIDR: number;
+  rateIDRtoKRW: number;
+  fullIDRTotal: number;
+  fullKRWTotal: number;
 }
 
 export function calculateInvoice(input: InvoiceCalculationInput): InvoiceCalculationResult {
@@ -101,6 +108,17 @@ export function calculateInvoice(input: InvoiceCalculationInput): InvoiceCalcula
   const totalKRW = Math.round(shippingSubtotalKRW + totalExtraKRW);
   const totalIDR = Math.round(totalExtraIDR);
 
+  // 5. Exchange Rate Calculations (+0.3 buffer for KRW->IDR, -0.3 buffer for IDR->KRW)
+  const baseRate = input.exchangeRateKRWtoIDR || 11.5;
+  const rateKRWtoIDR = Math.round((baseRate + 0.3) * 100) / 100;
+  const rateIDRtoKRW = Math.round((baseRate - 0.3) * 100) / 100;
+
+  const krwConvertedToIDR = Math.round(totalKRW * rateKRWtoIDR);
+  const fullIDRTotal = totalIDR + krwConvertedToIDR;
+
+  const idrConvertedToKRW = rateIDRtoKRW > 0 ? Math.round(totalIDR / rateIDRtoKRW) : 0;
+  const fullKRWTotal = totalKRW + idrConvertedToKRW;
+
   return {
     basePricePerKg,
     pickupDiscountApplied,
@@ -113,6 +131,11 @@ export function calculateInvoice(input: InvoiceCalculationInput): InvoiceCalcula
     totalExtraIDR,
     totalKRW,
     totalIDR,
+    exchangeRateUsed: baseRate,
+    rateKRWtoIDR,
+    rateIDRtoKRW,
+    fullIDRTotal,
+    fullKRWTotal,
   };
 }
 
@@ -125,6 +148,7 @@ export function generateTotalanText(
 ): string {
   const weightStr = formatWeight(input.weightKg);
   const lines: string[] = [];
+  const pref = input.paymentCurrencyPreference || 'ORIGINAL';
 
   lines.push('Halo kak, barangnya sudah siap dipickup hari ini atau dikirim besok ya. Berikut totalannya ya kak.');
   lines.push('');
@@ -160,20 +184,35 @@ export function generateTotalanText(
   }
 
   lines.push('');
-  lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
 
-  if (calc.totalIDR > 0) {
-    lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
+  if (pref === 'FULL_IDR') {
+    lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
+    if (calc.totalIDR > 0) {
+      lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
+    }
+    lines.push(`👉 Total Bayar Full IDR: Rp${formatNumber(calc.fullIDRTotal)} (Rate: 1 KRW = Rp${calc.rateKRWtoIDR})`);
+  } else if (pref === 'FULL_KRW') {
+    lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
+    if (calc.totalIDR > 0) {
+      lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
+    }
+    lines.push(`👉 Total Bayar Full KRW: ${formatNumber(calc.fullKRWTotal)} KRW (Rate: 1 KRW = Rp${calc.rateIDRtoKRW})`);
+  } else {
+    lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
+    if (calc.totalIDR > 0) {
+      lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
+      lines.push(`(Opsi Full IDR: Rp${formatNumber(calc.fullIDRTotal)} | Full KRW: ${formatNumber(calc.fullKRWTotal)} KRW)`);
+    }
   }
 
   // Bank Accounts
   lines.push('');
-  if (input.krwBankAccount) {
+  if (pref !== 'FULL_IDR' && input.krwBankAccount) {
     lines.push(input.krwBankAccount.trim());
   }
 
-  if (calc.totalIDR > 0 && input.idrBankAccount) {
-    lines.push('');
+  if (pref !== 'FULL_KRW' && input.idrBankAccount) {
+    if (pref !== 'FULL_IDR' && input.krwBankAccount) lines.push('');
     lines.push(input.idrBankAccount.trim());
   }
 

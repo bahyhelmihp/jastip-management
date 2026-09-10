@@ -11,6 +11,7 @@ interface RouteSetting {
   pickup_discount_per_kg: number;
   enable_over_5kg_price: boolean;
   enable_pickup_discount: boolean;
+  exchange_rate_krw_to_idr?: number;
   krw_bank_account: string;
   idr_bank_account: string;
 }
@@ -212,6 +213,43 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
                   Potongan harga per kg jika customer memilih metode pengambilan Pickup.
+                </p>
+              </div>
+
+              {/* Base Google Exchange Rate */}
+              <div className="md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+                <label className="block text-xs font-semibold uppercase text-sky-400 tracking-wider">
+                  Kurs Dasar Google Rate (1 KRW = X IDR)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={setting.exchange_rate_krw_to_idr ?? 11.5}
+                      onChange={(e) => handleChange(idx, 'exchange_rate_krw_to_idr', Number(e.target.value))}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
+                    />
+                    <span className="absolute right-4 top-2.5 text-slate-500 text-sm font-semibold">IDR</span>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-xs">
+                    <span className="block text-slate-400 font-medium">Rate KRW → IDR (+0.3):</span>
+                    <strong className="text-emerald-400 text-sm">
+                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 11.5) + 0.3).toFixed(2)}
+                    </strong>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-xs">
+                    <span className="block text-slate-400 font-medium">Rate IDR → KRW (-0.3):</span>
+                    <strong className="text-sky-400 text-sm">
+                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 11.5) - 0.3).toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Buffer +0.3 digunakan saat customer bayar KRW → IDR, dan buffer -0.3 digunakan saat customer bayar IDR → KRW agar terhindar dari rugi kurs.
                 </p>
               </div>
 

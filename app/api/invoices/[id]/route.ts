@@ -63,6 +63,7 @@ export async function PUT(
       item_count,
       pickup_or_delivery,
       apply_pickup_discount,
+      payment_currency_preference = 'ORIGINAL',
       payment_status,
       delivery_status,
       customer_note,
@@ -81,6 +82,7 @@ export async function PUT(
     const pickupDiscount = setting ? setting.pickup_discount_per_kg : (route.includes('CGK') ? 500 : 0);
     const enableOver5kg = setting ? setting.enable_over_5kg_price : route.includes('CGK');
     const enablePickupDisc = setting ? setting.enable_pickup_discount : route.includes('CGK');
+    const baseExchangeRate = setting ? (setting.exchange_rate_krw_to_idr || 11.5) : 11.5;
 
     const calc = calculateInvoice({
       customerName: customer_name,
@@ -95,6 +97,8 @@ export async function PUT(
       pickupDiscountPerKg: pickupDiscount,
       enableOver5kgPrice: enableOver5kg,
       enablePickupDiscount: enablePickupDisc,
+      exchangeRateKRWtoIDR: baseExchangeRate,
+      paymentCurrencyPreference: payment_currency_preference,
     });
 
     // Delete existing extra charges first
@@ -117,6 +121,8 @@ export async function PUT(
         shipping_subtotal_krw: calc.shippingSubtotalKRW,
         total_krw: calc.totalKRW,
         total_idr: calc.totalIDR,
+        payment_currency_preference: payment_currency_preference || 'ORIGINAL',
+        exchange_rate_used: baseExchangeRate,
         payment_status: payment_status || 'Unpaid',
         delivery_status: delivery_status || 'Pending',
         customer_note: customer_note ? customer_note.trim() : null,

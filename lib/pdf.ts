@@ -19,6 +19,10 @@ export interface PDFInvoiceData {
   totalIDR: number;
   paymentStatus: string;
   deliveryStatus: string;
+  paymentCurrencyPreference?: string; // "ORIGINAL" | "FULL_KRW" | "FULL_IDR"
+  exchangeRateUsed?: number;
+  fullIDRTotal?: number;
+  fullKRWTotal?: number;
   customerNote?: string | null;
   internalLabelColor?: string | null;
   showLabelToCustomer?: boolean;
@@ -239,22 +243,46 @@ export function generateInvoicePDF(data: PDFInvoiceData) {
   }
 
   // Summary Totals Box (Right Side)
-  const summaryBoxHeight = data.totalIDR > 0 ? 26 : 18;
+  const pref = data.paymentCurrencyPreference || 'ORIGINAL';
+  let summaryBoxHeight = 18;
+  if (pref === 'FULL_IDR' || pref === 'FULL_KRW' || data.totalIDR > 0) {
+    summaryBoxHeight = 32;
+  }
+
   doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
   doc.setDrawColor(blackColor[0], blackColor[1], blackColor[2]);
   doc.setLineWidth(0.4);
   doc.roundedRect(120, finalY, 76, summaryBoxHeight, 1.5, 1.5, 'FD');
 
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
-  doc.text('TOTAL KRW:', 124, finalY + 7);
-  doc.text(`${formatKRW(data.totalKRW)}`, 192, finalY + 7, { align: 'right' });
+  doc.text('TOTAL KRW:', 124, finalY + 6);
+  doc.text(`${formatKRW(data.totalKRW)}`, 192, finalY + 6, { align: 'right' });
+
+  let curY = finalY + 13;
 
   if (data.totalIDR > 0) {
-    doc.line(124, finalY + 11, 192, finalY + 11);
-    doc.text('TOTAL IDR:', 124, finalY + 18);
-    doc.text(`${formatIDR(data.totalIDR)}`, 192, finalY + 18, { align: 'right' });
+    doc.line(124, finalY + 8.5, 192, finalY + 8.5);
+    doc.text('TOTAL IDR:', 124, curY);
+    doc.text(`${formatIDR(data.totalIDR)}`, 192, curY, { align: 'right' });
+    curY += 7;
+  }
+
+  if (pref === 'FULL_IDR' && data.fullIDRTotal) {
+    doc.line(124, curY - 4.5, 192, curY - 4.5);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(16, 185, 129); // Emerald
+    doc.text('TOTAL FULL IDR:', 124, curY + 2);
+    doc.text(`${formatIDR(data.fullIDRTotal)}`, 192, curY + 2, { align: 'right' });
+  } else if (pref === 'FULL_KRW' && data.fullKRWTotal) {
+    doc.line(124, curY - 4.5, 192, curY - 4.5);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(2, 132, 199); // Sky
+    doc.text('TOTAL FULL KRW:', 124, curY + 2);
+    doc.text(`${formatKRW(data.fullKRWTotal)}`, 192, curY + 2, { align: 'right' });
   }
 
   // 5. FOOTER GUARANTEE NOTE BOX
