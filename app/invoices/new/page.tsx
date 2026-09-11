@@ -128,7 +128,7 @@ export default function CreateInvoicePage() {
       pickupDiscountPerKg: currentSetting.pickup_discount_per_kg,
       enableOver5kgPrice: currentSetting.enable_over_5kg_price,
       enablePickupDiscount: currentSetting.enable_pickup_discount,
-      exchangeRateKRWtoIDR: currentSetting.exchange_rate_krw_to_idr || 11.5,
+      exchangeRateKRWtoIDR: currentSetting.exchange_rate_krw_to_idr || 13.07,
       paymentCurrencyPreference,
       krwBankAccount: currentSetting.krw_bank_account,
       idrBankAccount: currentSetting.idr_bank_account,
@@ -569,9 +569,7 @@ export default function CreateInvoicePage() {
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
                 >
                   <option value="Pending">Pending (Belum Kirim/Pickup)</option>
-                  <option value="Sent">Sent (Dikirim)</option>
-                  <option value="Picked up">Picked up (Diambil)</option>
-                  <option value="Completed">Completed (Selesai)</option>
+                  <option value="Sent / Picked up">Sent / Picked up (Sudah Kirim/Pickup)</option>
                 </select>
               </div>
             </div>

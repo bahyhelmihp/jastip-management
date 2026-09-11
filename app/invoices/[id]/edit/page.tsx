@@ -130,7 +130,7 @@ export default function EditInvoicePage() {
         pickup_discount_per_kg: route.includes('CGK') ? 500 : 0,
         enable_over_5kg_price: route.includes('CGK'),
         enable_pickup_discount: route.includes('CGK'),
-        exchange_rate_krw_to_idr: 11.5,
+        exchange_rate_krw_to_idr: 13.07,
         krw_bank_account: `토스뱅크 Toss Bank\n100043237236\nPutra Bahy Helmi Hartoyo`,
         idr_bank_account: `BCA 8410928123\na.n. Putra Bahy Helmi Hartoyo`,
       }
@@ -155,7 +155,7 @@ export default function EditInvoicePage() {
       pickupDiscountPerKg: currentSetting.pickup_discount_per_kg,
       enableOver5kgPrice: currentSetting.enable_over_5kg_price,
       enablePickupDiscount: currentSetting.enable_pickup_discount,
-      exchangeRateKRWtoIDR: currentSetting.exchange_rate_krw_to_idr || 11.5,
+      exchangeRateKRWtoIDR: currentSetting.exchange_rate_krw_to_idr || 13.07,
       paymentCurrencyPreference,
       krwBankAccount: currentSetting.krw_bank_account,
       idrBankAccount: currentSetting.idr_bank_account,
@@ -593,14 +593,16 @@ export default function EditInvoicePage() {
                   Status Pengiriman
                 </label>
                 <select
-                  value={deliveryStatus}
+                  value={
+                    deliveryStatus === 'Sent' || deliveryStatus === 'Picked up' || deliveryStatus === 'Completed' || deliveryStatus === 'Sent / Picked up'
+                      ? 'Sent / Picked up'
+                      : 'Pending'
+                  }
                   onChange={(e) => setDeliveryStatus(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
                 >
                   <option value="Pending">Pending (Belum Kirim/Pickup)</option>
-                  <option value="Sent">Sent (Dikirim)</option>
-                  <option value="Picked up">Picked up (Diambil)</option>
-                  <option value="Completed">Completed (Selesai)</option>
+                  <option value="Sent / Picked up">Sent / Picked up (Sudah Kirim/Pickup)</option>
                 </select>
               </div>
             </div>

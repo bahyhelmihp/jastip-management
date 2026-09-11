@@ -109,7 +109,7 @@ export function calculateInvoice(input: InvoiceCalculationInput): InvoiceCalcula
   const totalIDR = Math.round(totalExtraIDR);
 
   // 5. Exchange Rate Calculations (+0.3 buffer for KRW->IDR, -0.3 buffer for IDR->KRW)
-  const baseRate = input.exchangeRateKRWtoIDR || 11.5;
+  const baseRate = input.exchangeRateKRWtoIDR || 13.07;
   const rateKRWtoIDR = Math.round((baseRate + 0.3) * 100) / 100;
   const rateIDRtoKRW = Math.round((baseRate - 0.3) * 100) / 100;
 
@@ -190,13 +190,13 @@ export function generateTotalanText(
     if (calc.totalIDR > 0) {
       lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
     }
-    lines.push(`👉 Total Bayar Full IDR: Rp${formatNumber(calc.fullIDRTotal)} (Rate: 1 KRW = Rp${calc.rateKRWtoIDR})`);
+    lines.push(`Total Bayar Full IDR: Rp${formatNumber(calc.fullIDRTotal)} (Rate Khusus Jastip: 1 KRW = Rp${calc.rateKRWtoIDR})`);
   } else if (pref === 'FULL_KRW') {
     lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
     if (calc.totalIDR > 0) {
       lines.push(`Total IDR: Rp${formatNumber(calc.totalIDR)}`);
     }
-    lines.push(`👉 Total Bayar Full KRW: ${formatNumber(calc.fullKRWTotal)} KRW (Rate: 1 KRW = Rp${calc.rateIDRtoKRW})`);
+    lines.push(`Total Bayar Full KRW: ${formatNumber(calc.fullKRWTotal)} KRW (Rate Khusus Jastip: 1 KRW = Rp${calc.rateIDRtoKRW})`);
   } else {
     lines.push(`Total KRW: ${formatNumber(calc.totalKRW)} KRW`);
     if (calc.totalIDR > 0) {
@@ -223,13 +223,15 @@ export function generateTotalanText(
   lines.push('');
   if (input.pickupOrDelivery === 'pickup') {
     lines.push(
-      'Untuk pengambilan barang bisa janjian lebih lanjut di chat ini ya kak. Untuk pelunasan, bisa dilakukan sebelum pickup ya 🙏'
+      'Untuk pengambilan barang bisa janjian lebih lanjut di chat ini ya kak. Untuk pelunasan, bisa dilakukan sebelum pickup ya'
     );
   } else {
     lines.push(
-      'Untuk pengiriman, bisa diinfokan alamat kirimnya ya. Untuk pelunasan, bisa dilakukan sebelum barang dikirim ya (ongkir lokal dibayarkan terpisah setelah resi keluar) 🙏'
+      'Untuk pengiriman, bisa diinfokan alamat kirimnya ya. Untuk pelunasan, bisa dilakukan sebelum barang dikirim ya (ongkir lokal dibayarkan terpisah setelah resi keluar)'
     );
   }
+
+  return lines.join('\n');
 
   return lines.join('\n');
 }

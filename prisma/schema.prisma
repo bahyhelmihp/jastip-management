@@ -15,7 +15,7 @@ model Settings {
   pickup_discount_per_kg Float   @default(0)
   enable_over_5kg_price Boolean  @default(false)
   enable_pickup_discount Boolean @default(false)
-  exchange_rate_krw_to_idr Float @default(11.5)
+  exchange_rate_krw_to_idr Float @default(13.07)
   krw_bank_account      String
   idr_bank_account      String
   created_at            DateTime @default(now())
@@ -37,7 +37,7 @@ model Invoice {
   total_krw                   Float
   total_idr                   Float                @default(0)
   payment_currency_preference String               @default("ORIGINAL") // "ORIGINAL", "FULL_KRW", "FULL_IDR"
-  exchange_rate_used          Float                @default(11.5)
+  exchange_rate_used          Float                @default(13.07)
   payment_status              String               @default("Unpaid") // "Unpaid", "Paid", "Partially Paid"
   delivery_status             String               @default("Pending") // "Pending", "Arrived", "Sent", "Picked up", "Completed"
   customer_note               String?

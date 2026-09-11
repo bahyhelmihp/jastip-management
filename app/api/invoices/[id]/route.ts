@@ -82,7 +82,7 @@ export async function PUT(
     const pickupDiscount = setting ? setting.pickup_discount_per_kg : (route.includes('CGK') ? 500 : 0);
     const enableOver5kg = setting ? setting.enable_over_5kg_price : route.includes('CGK');
     const enablePickupDisc = setting ? setting.enable_pickup_discount : route.includes('CGK');
-    const baseExchangeRate = setting ? (setting.exchange_rate_krw_to_idr || 11.5) : 11.5;
+    const baseExchangeRate = setting ? (setting.exchange_rate_krw_to_idr || 13.07) : 13.07;
 
     const calc = calculateInvoice({
       customerName: customer_name,

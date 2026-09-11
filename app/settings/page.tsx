@@ -218,15 +218,32 @@ export default function SettingsPage() {
 
               {/* Base Google Exchange Rate */}
               <div className="md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
-                <label className="block text-xs font-semibold uppercase text-sky-400 tracking-wider">
-                  Kurs Dasar Google Rate (1 KRW = X IDR)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold uppercase text-sky-400 tracking-wider">
+                    Kurs Dasar Google Rate (1 KRW = X IDR)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/exchange-rate');
+                        const data = await res.json();
+                        if (data.rate) {
+                          handleChange(idx, 'exchange_rate_krw_to_idr', data.rate);
+                        }
+                      } catch (e) {}
+                    }}
+                    className="text-xs text-sky-400 hover:text-sky-300 font-medium underline flex items-center space-x-1"
+                  >
+                    <span>Fetch Rate Google Terkini (API)</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
                   <div className="relative">
                     <input
                       type="number"
-                      step="0.1"
-                      value={setting.exchange_rate_krw_to_idr ?? 11.5}
+                      step="0.01"
+                      value={setting.exchange_rate_krw_to_idr ?? 13.07}
                       onChange={(e) => handleChange(idx, 'exchange_rate_krw_to_idr', Number(e.target.value))}
                       onWheel={(e) => e.currentTarget.blur()}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
@@ -237,19 +254,19 @@ export default function SettingsPage() {
                   <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-xs">
                     <span className="block text-slate-400 font-medium">Rate KRW → IDR (+0.3):</span>
                     <strong className="text-emerald-400 text-sm">
-                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 11.5) + 0.3).toFixed(2)}
+                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 13.07) + 0.3).toFixed(2)}
                     </strong>
                   </div>
 
                   <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-xs">
                     <span className="block text-slate-400 font-medium">Rate IDR → KRW (-0.3):</span>
                     <strong className="text-sky-400 text-sm">
-                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 11.5) - 0.3).toFixed(2)}
+                      1 KRW = Rp{((setting.exchange_rate_krw_to_idr ?? 13.07) - 0.3).toFixed(2)}
                     </strong>
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Buffer +0.3 digunakan saat customer bayar KRW → IDR, dan buffer -0.3 digunakan saat customer bayar IDR → KRW agar terhindar dari rugi kurs.
+                  Buffer +0.3 digunakan saat customer bayar KRW → IDR (Rate Khusus Jastip), dan buffer -0.3 digunakan saat customer bayar IDR → KRW (Rate Khusus Jastip) agar terhindar dari rugi kurs.
                 </p>
               </div>
 

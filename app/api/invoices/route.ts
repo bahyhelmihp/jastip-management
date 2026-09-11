@@ -27,7 +27,18 @@ export async function GET(request: Request) {
     }
 
     if (deliveryStatus && deliveryStatus !== 'ALL') {
-      where.delivery_status = deliveryStatus;
+      if (deliveryStatus === 'Pending') {
+        where.delivery_status = { in: ['Pending', 'Arrived'] };
+      } else if (
+        deliveryStatus === 'Sent / Picked up' ||
+        deliveryStatus === 'Sent' ||
+        deliveryStatus === 'Picked up' ||
+        deliveryStatus === 'Completed'
+      ) {
+        where.delivery_status = { in: ['Sent / Picked up', 'Sent', 'Picked up', 'Completed'] };
+      } else {
+        where.delivery_status = deliveryStatus;
+      }
     }
 
     const invoices = await prisma.invoice.findMany({
@@ -80,7 +91,7 @@ export async function POST(request: Request) {
     const pickupDiscount = setting ? setting.pickup_discount_per_kg : (route.includes('CGK') ? 500 : 0);
     const enableOver5kg = setting ? setting.enable_over_5kg_price : route.includes('CGK');
     const enablePickupDisc = setting ? setting.enable_pickup_discount : route.includes('CGK');
-    const baseExchangeRate = setting ? (setting.exchange_rate_krw_to_idr || 11.5) : 11.5;
+    const baseExchangeRate = setting ? (setting.exchange_rate_krw_to_idr || 13.07) : 13.07;
 
     const calc = calculateInvoice({
       customerName: customer_name,

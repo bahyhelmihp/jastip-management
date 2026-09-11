@@ -18,6 +18,9 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import {
   formatNumber,
@@ -65,6 +68,7 @@ interface RouteSetting {
   route: string;
   krw_bank_account: string;
   idr_bank_account: string;
+  exchange_rate_krw_to_idr?: number;
 }
 
 export default function InvoiceDashboard() {
@@ -72,35 +76,149 @@ export default function InvoiceDashboard() {
   const [settingsMap, setSettingsMap] = useState<Record<string, RouteSetting>>({});
   const [loading, setLoading] = useState(true);
 
+  // Google Rate Control State
+  const [googleRateInput, setGoogleRateInput] = useState('13.07');
+  const [isSavingRate, setIsSavingRate] = useState(false);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [rateSavedMessage, setRateSavedMessage] = useState<string | null>(null);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [routeFilter, setRouteFilter] = useState('ALL');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('ALL');
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('ALL');
 
+  // Sorting State
+  type SortField = 'customer_name' | 'route' | 'weight_kg' | 'total_krw' | 'payment_status' | 'delivery_status' | 'created_at';
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3.5 h-3.5 text-slate-600 inline ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />;
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="w-3.5 h-3.5 text-sky-400 inline ml-1 font-bold" />
+    ) : (
+      <ArrowDown className="w-3.5 h-3.5 text-sky-400 inline ml-1 font-bold" />
+    );
+  };
+
+  const sortedInvoices = useMemo(() => {
+    const list = [...invoices];
+    list.sort((a, b) => {
+      let valA: any = a[sortField];
+      let valB: any = b[sortField];
+
+      if (sortField === 'created_at') {
+        valA = new Date(a.created_at).getTime();
+        valB = new Date(b.created_at).getTime();
+      } else if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = (valB || '').toLowerCase();
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [invoices, sortField, sortOrder]);
+
   // UI Toast
   const [copiedInvoiceId, setCopiedInvoiceId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Load Settings
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const map: Record<string, RouteSetting> = {};
+        data.forEach((s: RouteSetting) => {
+          map[s.route] = s;
+        });
+        setSettingsMap(map);
+        if (data[0]?.exchange_rate_krw_to_idr) {
+          setGoogleRateInput(String(data[0].exchange_rate_krw_to_idr));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load settings', err);
+    }
+  }, []);
+
   useEffect(() => {
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/settings');
+    loadSettings();
+  }, [loadSettings]);
+
+  // Save manual rate to settings
+  const handleSaveRate = async (newRate: number) => {
+    setIsSavingRate(true);
+    setRateSavedMessage(null);
+    try {
+      const fetchRes = await fetch('/api/settings');
+      const currentSettings = await fetchRes.json();
+      const updated = Array.isArray(currentSettings)
+        ? currentSettings.map((s: any) => ({
+            ...s,
+            exchange_rate_krw_to_idr: newRate,
+          }))
+        : [];
+
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: updated }),
+      });
+
+      if (res.ok) {
         const data = await res.json();
+        setGoogleRateInput(String(newRate));
+        setRateSavedMessage(`Rate disimpan: Rp${newRate}`);
+        setTimeout(() => setRateSavedMessage(null), 3500);
+
+        const map: Record<string, RouteSetting> = {};
         if (Array.isArray(data)) {
-          const map: Record<string, RouteSetting> = {};
-          data.forEach((s: RouteSetting) => {
+          data.forEach((s: any) => {
             map[s.route] = s;
           });
-          setSettingsMap(map);
         }
-      } catch (err) {
-        console.error('Failed to load settings', err);
+        setSettingsMap(map);
       }
+    } catch (err) {
+      console.error('Failed to save exchange rate', err);
+    } finally {
+      setIsSavingRate(false);
     }
-    loadSettings();
-  }, []);
+  };
+
+  // Auto fetch live rate from Google API
+  const handleFetchLiveRate = async () => {
+    setIsFetchingRate(true);
+    try {
+      const res = await fetch('/api/exchange-rate');
+      const data = await res.json();
+      if (data.rate && typeof data.rate === 'number') {
+        setGoogleRateInput(String(data.rate));
+        await handleSaveRate(data.rate);
+      }
+    } catch (err) {
+      console.error('Failed to fetch live rate', err);
+    } finally {
+      setIsFetchingRate(false);
+    }
+  };
 
   // Fetch Invoices
   const fetchInvoices = useCallback(async () => {
@@ -145,16 +263,14 @@ export default function InvoiceDashboard() {
 
   const getDeliveryBadge = (status: string) => {
     switch (status) {
+      case 'Sent / Picked up':
+      case 'Sent':
+      case 'Picked up':
       case 'Completed':
         return 'bg-emerald-950/70 text-emerald-300 border-emerald-500/30';
-      case 'Picked up':
-        return 'bg-sky-950/70 text-sky-300 border-sky-500/30';
-      case 'Sent':
-        return 'bg-indigo-950/70 text-indigo-300 border-indigo-500/30';
-      case 'Arrived':
-        return 'bg-purple-950/70 text-purple-300 border-purple-500/30';
+      case 'Pending':
       default:
-        return 'bg-slate-800 text-slate-400 border-slate-700';
+        return 'bg-amber-950/70 text-amber-400 border-amber-500/40';
     }
   };
 
@@ -189,7 +305,7 @@ export default function InvoiceDashboard() {
         );
       }
     } catch (err) {
-      console.error('Failed to update delivery status', err);
+      console.error('Failed to update status', err);
     }
   };
 
@@ -209,7 +325,7 @@ export default function InvoiceDashboard() {
     }
   };
 
-  // Copy WhatsApp Text Totalan
+  // Copy Totalan Text to Clipboard
   const handleCopyWAText = async (inv: Invoice) => {
     const setting = settingsMap[inv.route] || {
       route: inv.route,
@@ -230,7 +346,7 @@ export default function InvoiceDashboard() {
       pickupDiscountPerKg: inv.pickup_discount_per_kg,
       enableOver5kgPrice: false,
       enablePickupDiscount: inv.pickup_discount_per_kg > 0,
-      exchangeRateKRWtoIDR: inv.exchange_rate_used || 11.5,
+      exchangeRateKRWtoIDR: inv.exchange_rate_used || 13.07,
       paymentCurrencyPreference: (inv.payment_currency_preference as any) || 'ORIGINAL',
       krwBankAccount: setting.krw_bank_account,
       idrBankAccount: setting.idr_bank_account,
@@ -269,7 +385,7 @@ export default function InvoiceDashboard() {
       pickupDiscountPerKg: inv.pickup_discount_per_kg,
       enableOver5kgPrice: false,
       enablePickupDiscount: inv.pickup_discount_per_kg > 0,
-      exchangeRateKRWtoIDR: inv.exchange_rate_used || 11.5,
+      exchangeRateKRWtoIDR: inv.exchange_rate_used || 13.07,
       paymentCurrencyPreference: (inv.payment_currency_preference as any) || 'ORIGINAL',
       krwBankAccount: setting.krw_bank_account,
       idrBankAccount: setting.idr_bank_account,
@@ -315,14 +431,17 @@ export default function InvoiceDashboard() {
     const sumKRW = invoices.reduce((acc, i) => acc + i.total_krw, 0);
     const sumIDR = invoices.reduce((acc, i) => acc + i.total_idr, 0);
 
-    // Delivery Status Metrics
+    // Delivery Status Metrics (Pending vs Sent / Picked up)
     const pendingDeliveryCount = invoices.filter(
       (i) => i.delivery_status === 'Pending' || i.delivery_status === 'Arrived' || !i.delivery_status
     ).length;
-    const sentCount = invoices.filter((i) => i.delivery_status === 'Sent').length;
-    const pickedUpCount = invoices.filter((i) => i.delivery_status === 'Picked up').length;
-    const completedCount = invoices.filter((i) => i.delivery_status === 'Completed').length;
-    const dispatchedCount = sentCount + pickedUpCount + completedCount;
+    const dispatchedCount = invoices.filter(
+      (i) =>
+        i.delivery_status === 'Sent / Picked up' ||
+        i.delivery_status === 'Sent' ||
+        i.delivery_status === 'Picked up' ||
+        i.delivery_status === 'Completed'
+    ).length;
 
     return {
       totalCount,
@@ -330,9 +449,6 @@ export default function InvoiceDashboard() {
       sumKRW,
       sumIDR,
       pendingDeliveryCount,
-      sentCount,
-      pickedUpCount,
-      completedCount,
       dispatchedCount,
     };
   }, [invoices]);
@@ -354,6 +470,81 @@ export default function InvoiceDashboard() {
           <Plus className="w-5 h-5" />
           <span>Buat Invoice Baru</span>
         </Link>
+      </div>
+
+      {/* Google Exchange Rate Control Widget */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-5 h-5 text-sky-400" />
+              <h2 className="text-base font-bold text-white tracking-tight">Kurs Dasar Google Rate (1 KRW = X IDR)</h2>
+              {rateSavedMessage && (
+                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-medium transition-all">
+                  {rateSavedMessage}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">
+              Input nilai rate secara manual jika terdapat perbedaan dengan rate Google, atau tekan tombol update otomatis dari API.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Manual Input Field */}
+            <div className="flex items-center space-x-2 bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-sky-500 transition-all">
+              <span className="text-xs text-slate-400 font-medium">1 KRW = Rp</span>
+              <input
+                type="number"
+                step="0.01"
+                value={googleRateInput}
+                onChange={(e) => setGoogleRateInput(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
+                className="w-20 bg-transparent text-white font-bold text-sm outline-none font-mono"
+                placeholder="13.07"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const val = parseFloat(googleRateInput);
+                  if (!isNaN(val) && val > 0) handleSaveRate(val);
+                }}
+                disabled={isSavingRate}
+                className="text-xs bg-sky-500 hover:bg-sky-400 text-white font-semibold px-3 py-1 rounded-lg transition-all disabled:opacity-50"
+              >
+                {isSavingRate ? '...' : 'Simpan Rate'}
+              </button>
+            </div>
+
+            {/* Auto Refresh Button */}
+            <button
+              type="button"
+              onClick={handleFetchLiveRate}
+              disabled={isFetchingRate || isSavingRate}
+              className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 hover:border-sky-500/50 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all disabled:opacity-50"
+              title="Ambil rate Google terkini otomatis via API"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetchingRate ? 'animate-spin' : ''}`} />
+              <span>Update Auto (API)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Live Buffer Rate Badges */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800/80">
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl px-3.5 py-2 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Rate Khusus KRW → IDR (+0.3):</span>
+            <span className="text-xs font-bold font-mono text-emerald-400">
+              1 KRW = Rp{((parseFloat(googleRateInput) || 13.07) + 0.3).toFixed(2)}
+            </span>
+          </div>
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl px-3.5 py-2 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">Rate Khusus IDR → KRW (-0.3):</span>
+            <span className="text-xs font-bold font-mono text-sky-400">
+              1 KRW = Rp{((parseFloat(googleRateInput) || 13.07) - 0.3).toFixed(2)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Summary Metrics Cards */}
@@ -406,11 +597,11 @@ export default function InvoiceDashboard() {
           </div>
         </div>
 
-        {/* Dispatched/Picked Up/Completed */}
+        {/* Dispatched/Picked Up */}
         <div 
-          onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent' ? 'ALL' : 'Sent')}
+          onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent / Picked up' ? 'ALL' : 'Sent / Picked up')}
           className={`bg-slate-900/80 border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
-            deliveryStatusFilter === 'Sent' || deliveryStatusFilter === 'Picked up' || deliveryStatusFilter === 'Completed'
+            deliveryStatusFilter === 'Sent / Picked up' || deliveryStatusFilter === 'Sent' || deliveryStatusFilter === 'Picked up' || deliveryStatusFilter === 'Completed'
               ? 'border-emerald-500 ring-2 ring-emerald-500/20'
               : 'border-slate-800 hover:border-emerald-500/50'
           }`}
@@ -423,7 +614,7 @@ export default function InvoiceDashboard() {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-extrabold text-emerald-400 font-mono">{summary.dispatchedCount}</span>
-            <span className="block text-[11px] text-slate-500 mt-0.5">Sent, Picked up, Selesai</span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">Sent / Picked up</span>
           </div>
         </div>
 
@@ -487,36 +678,14 @@ export default function InvoiceDashboard() {
           </button>
 
           <button
-            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent' ? 'ALL' : 'Sent')}
+            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Sent / Picked up' ? 'ALL' : 'Sent / Picked up')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              deliveryStatusFilter === 'Sent'
-                ? 'bg-indigo-500 text-white font-bold border-indigo-400 shadow-md'
-                : 'bg-indigo-950/40 text-indigo-300 border-indigo-800/60 hover:bg-indigo-950/70'
-            }`}
-          >
-            🚚 Dikirim / Sent ({summary.sentCount})
-          </button>
-
-          <button
-            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Picked up' ? 'ALL' : 'Picked up')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              deliveryStatusFilter === 'Picked up'
-                ? 'bg-sky-500 text-slate-950 font-bold border-sky-400 shadow-md'
-                : 'bg-sky-950/40 text-sky-300 border-sky-800/60 hover:bg-sky-950/70'
-            }`}
-          >
-            🤝 Diambil / Picked up ({summary.pickedUpCount})
-          </button>
-
-          <button
-            onClick={() => setDeliveryStatusFilter(deliveryStatusFilter === 'Completed' ? 'ALL' : 'Completed')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              deliveryStatusFilter === 'Completed'
+              deliveryStatusFilter === 'Sent / Picked up'
                 ? 'bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-md'
                 : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-950/70'
             }`}
           >
-            ✅ Selesai / Completed ({summary.completedCount})
+            🚚 Sent / Picked up ({summary.dispatchedCount})
           </button>
         </div>
       </div>
@@ -573,9 +742,7 @@ export default function InvoiceDashboard() {
             >
               <option value="ALL">Semua Status Pengiriman</option>
               <option value="Pending">Pending (Belum Kirim/Pickup)</option>
-              <option value="Sent">Sent (Dikirim)</option>
-              <option value="Picked up">Picked up (Diambil)</option>
-              <option value="Completed">Completed (Selesai)</option>
+              <option value="Sent / Picked up">Sent / Picked up (Sudah Kirim/Pickup)</option>
             </select>
           </div>
 
@@ -598,19 +765,79 @@ export default function InvoiceDashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800 font-semibold">
+              <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800 font-semibold select-none">
                 <tr>
-                  <th className="py-3.5 px-4">No. Invoice & Customer</th>
-                  <th className="py-3.5 px-4">Rute & Metode</th>
-                  <th className="py-3.5 px-4">Berat & Item</th>
-                  <th className="py-3.5 px-4">Total Bayar</th>
-                  <th className="py-3.5 px-4">Status Bayar</th>
-                  <th className="py-3.5 px-4">Status Kirim</th>
+                  <th
+                    onClick={() => handleSort('customer_name')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Nama Customer / Invoice"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Customer & Invoice</span>
+                      {renderSortIcon('customer_name')}
+                    </div>
+                  </th>
+
+                  <th
+                    onClick={() => handleSort('route')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Rute"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Rute & Metode</span>
+                      {renderSortIcon('route')}
+                    </div>
+                  </th>
+
+                  <th
+                    onClick={() => handleSort('weight_kg')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Berat"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Berat & Item</span>
+                      {renderSortIcon('weight_kg')}
+                    </div>
+                  </th>
+
+                  <th
+                    onClick={() => handleSort('total_krw')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Total Tagihan"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Total Bayar</span>
+                      {renderSortIcon('total_krw')}
+                    </div>
+                  </th>
+
+                  <th
+                    onClick={() => handleSort('payment_status')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Status Bayar"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Status Bayar</span>
+                      {renderSortIcon('payment_status')}
+                    </div>
+                  </th>
+
+                  <th
+                    onClick={() => handleSort('delivery_status')}
+                    className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors group"
+                    title="Klik untuk mengurutkan berdasarkan Status Kirim"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Status Kirim</span>
+                      {renderSortIcon('delivery_status')}
+                    </div>
+                  </th>
+
                   <th className="py-3.5 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {invoices.map((inv) => (
+                {sortedInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-800/40 transition-colors">
                     
                     {/* Customer & Invoice No */}
@@ -685,17 +912,18 @@ export default function InvoiceDashboard() {
                     {/* Delivery Status Selector */}
                     <td className="py-4 px-4">
                       <select
-                        value={inv.delivery_status}
+                        value={
+                          inv.delivery_status === 'Sent' || inv.delivery_status === 'Picked up' || inv.delivery_status === 'Completed' || inv.delivery_status === 'Sent / Picked up'
+                            ? 'Sent / Picked up'
+                            : 'Pending'
+                        }
                         onChange={(e) => handleUpdateDeliveryStatus(inv.id, e.target.value)}
                         className={`px-2.5 py-1 rounded-lg border text-xs font-semibold outline-none cursor-pointer ${getDeliveryBadge(
                           inv.delivery_status
                         )}`}
                       >
-                        <option value="Pending" className="bg-slate-900 text-slate-300">Pending</option>
-                        <option value="Arrived" className="bg-slate-900 text-purple-300">Arrived</option>
-                        <option value="Sent" className="bg-slate-900 text-indigo-300">Sent</option>
-                        <option value="Picked up" className="bg-slate-900 text-sky-300">Picked up</option>
-                        <option value="Completed" className="bg-slate-900 text-emerald-300">Completed</option>
+                        <option value="Pending" className="bg-slate-900 text-amber-400">Pending</option>
+                        <option value="Sent / Picked up" className="bg-slate-900 text-emerald-400">Sent / Picked up</option>
                       </select>
                     </td>
 
