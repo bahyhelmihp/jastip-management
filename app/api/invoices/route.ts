@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { calculateInvoice } from '@/lib/utils';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
+    const user = await getSessionUser();
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const route = searchParams.get('route') || '';
@@ -11,6 +13,10 @@ export async function GET(request: Request) {
     const deliveryStatus = searchParams.get('delivery_status') || '';
 
     const where: any = {};
+
+    if (user) {
+      where.user_id = user.id;
+    }
 
     if (search.trim()) {
       where.customer_name = {
@@ -59,6 +65,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getSessionUser();
     const body = await request.json();
     const {
       customer_name,
@@ -81,9 +88,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch settings for route
-    const setting = await prisma.settings.findUnique({
-      where: { route },
+    // Fetch settings for route (scoped to user if authenticated)
+    const setting = await prisma.settings.findFirst({
+      where: user ? { user_id: user.id, route } : { route },
     });
 
     const normalPrice = setting ? setting.normal_price_per_kg : (route.includes('ICN') ? 13000 : 9500);
@@ -126,6 +133,7 @@ export async function POST(request: Request) {
     // Create Invoice with extra charges
     const invoice = await prisma.invoice.create({
       data: {
+        user_id: user?.id || null,
         invoice_number: invoiceNumber,
         customer_name: customer_name.trim(),
         route,

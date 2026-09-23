@@ -26,6 +26,28 @@ export function formatWeight(weightKg: number): string {
   return rounded.toString();
 }
 
+/**
+ * Get public app base URL (Cloudflare Tunnel, custom domain, or local request host)
+ */
+export function getAppBaseUrl(req?: Request): string {
+  const envUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl && envUrl.trim()) {
+    let cleanUrl = envUrl.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+    return cleanUrl.replace(/\/+$/, '');
+  }
+
+  if (req) {
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
+    const protocol = req.headers.get('x-forwarded-proto') || 'http';
+    return `${protocol}://${host}`.replace(/\/+$/, '');
+  }
+
+  return 'http://localhost:3000';
+}
+
 export interface ExtraChargeItem {
   id?: string;
   name: string;
@@ -232,8 +254,6 @@ export function generateTotalanText(
   }
 
   return lines.join('\n');
-
-  return lines.join('\n');
 }
 
 /**
@@ -255,4 +275,3 @@ export function cleanPdfText(text: string | null | undefined): string {
     .filter((line) => line.length > 0)
     .join('\n');
 }
-

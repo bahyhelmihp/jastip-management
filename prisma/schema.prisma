@@ -7,9 +7,35 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+model User {
+  id             String              @id @default(cuid())
+  email          String              @unique
+  name           String?
+  password_hash  String
+  email_verified Boolean             @default(false)
+  role           String              @default("USER") // "ADMIN" | "USER"
+  created_at     DateTime            @default(now())
+  updated_at     DateTime            @updatedAt
+  settings       Settings[]
+  invoices       Invoice[]
+  tokens         VerificationToken[]
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token      String   @unique
+  type       String   // "EMAIL_VERIFICATION" | "PASSWORD_RESET"
+  expires_at DateTime
+  created_at DateTime @default(now())
+}
+
 model Settings {
   id                    Int      @id @default(autoincrement())
-  route                 String   @unique
+  user_id               String?
+  user                  User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  route                 String
   normal_price_per_kg   Float
   over_5kg_price_per_kg Float    @default(0)
   pickup_discount_per_kg Float   @default(0)
@@ -20,10 +46,14 @@ model Settings {
   idr_bank_account      String
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
+
+  @@unique([user_id, route])
 }
 
 model Invoice {
   id                          String               @id @default(cuid())
+  user_id                     String?
+  user                        User?                @relation(fields: [user_id], references: [id], onDelete: Cascade)
   invoice_number              String               @unique
   customer_name               String
   route                       String
@@ -58,3 +88,4 @@ model InvoiceExtraCharge {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
+

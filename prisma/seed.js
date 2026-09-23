@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 const DEFAULT_KRW_BANK = `토스뱅크 Toss Bank
@@ -9,12 +10,35 @@ const DEFAULT_IDR_BANK = `BCA 8410928123
 a.n. Putra Bahy Helmi Hartoyo`;
 
 async function main() {
-  console.log('Seeding default Jastip settings...');
+  console.log('Seeding default Jastip settings and Admin account...');
 
+  // 1. Seed Default Admin User
+  const adminEmail = 'admin@jastip.com';
+  const adminPasswordHash = await bcrypt.hash('admin123456', 10);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      role: 'ADMIN',
+      email_verified: true,
+    },
+    create: {
+      email: adminEmail,
+      name: 'System Admin',
+      password_hash: adminPasswordHash,
+      email_verified: true,
+      role: 'ADMIN',
+    },
+  });
+
+  console.log(`Admin user ready: ${adminUser.email} (Role: ${adminUser.role})`);
+
+  // 2. Seed Default Global Route Settings
   await prisma.settings.upsert({
-    where: { route: 'ICN → CGK' },
+    where: { user_id_route: { user_id: adminUser.id, route: 'ICN → CGK' } },
     update: {},
     create: {
+      user_id: adminUser.id,
       route: 'ICN → CGK',
       normal_price_per_kg: 13000,
       over_5kg_price_per_kg: 13000,
@@ -27,9 +51,10 @@ async function main() {
   });
 
   await prisma.settings.upsert({
-    where: { route: 'CGK → ICN' },
+    where: { user_id_route: { user_id: adminUser.id, route: 'CGK → ICN' } },
     update: {},
     create: {
+      user_id: adminUser.id,
       route: 'CGK → ICN',
       normal_price_per_kg: 9500,
       over_5kg_price_per_kg: 9000,

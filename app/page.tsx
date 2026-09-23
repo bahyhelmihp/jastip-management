@@ -138,32 +138,8 @@ export default function InvoiceDashboard() {
   const [copiedInvoiceId, setCopiedInvoiceId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Load Settings
-  const loadSettings = useCallback(async () => {
-    try {
-      const res = await fetch('/api/settings');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const map: Record<string, RouteSetting> = {};
-        data.forEach((s: RouteSetting) => {
-          map[s.route] = s;
-        });
-        setSettingsMap(map);
-        if (data[0]?.exchange_rate_krw_to_idr) {
-          setGoogleRateInput(String(data[0].exchange_rate_krw_to_idr));
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load settings', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
-
   // Save manual rate to settings
-  const handleSaveRate = async (newRate: number) => {
+  const handleSaveRate = useCallback(async (newRate: number) => {
     setIsSavingRate(true);
     setRateSavedMessage(null);
     try {
@@ -201,13 +177,13 @@ export default function InvoiceDashboard() {
     } finally {
       setIsSavingRate(false);
     }
-  };
+  }, []);
 
-  // Auto fetch live rate from Google API
-  const handleFetchLiveRate = async () => {
+  // Auto fetch live rate from Google / Real-time API
+  const handleFetchLiveRate = useCallback(async () => {
     setIsFetchingRate(true);
     try {
-      const res = await fetch('/api/exchange-rate');
+      const res = await fetch(`/api/exchange-rate?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.rate && typeof data.rate === 'number') {
         setGoogleRateInput(String(data.rate));
@@ -218,7 +194,32 @@ export default function InvoiceDashboard() {
     } finally {
       setIsFetchingRate(false);
     }
-  };
+  }, [handleSaveRate]);
+
+  // Load Settings and auto-refresh live exchange rate on page open/refresh
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const map: Record<string, RouteSetting> = {};
+        data.forEach((s: RouteSetting) => {
+          map[s.route] = s;
+        });
+        setSettingsMap(map);
+        if (data[0]?.exchange_rate_krw_to_idr) {
+          setGoogleRateInput(String(data[0].exchange_rate_krw_to_idr));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load settings', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+    handleFetchLiveRate();
+  }, [loadSettings, handleFetchLiveRate]);
 
   // Fetch Invoices
   const fetchInvoices = useCallback(async () => {

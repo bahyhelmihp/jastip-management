@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { calculateInvoice } from '@/lib/utils';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id: params.id },
@@ -26,10 +28,24 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
+    const user = await getSessionUser();
     const body = await request.json();
+
+    const existing = await prisma.invoice.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
+    if (user && existing.user_id && existing.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // If only status update
     if (body.payment_status && !body.customer_name) {
@@ -73,8 +89,8 @@ export async function PUT(
     } = body;
 
     // Fetch route setting
-    const setting = await prisma.settings.findUnique({
-      where: { route },
+    const setting = await prisma.settings.findFirst({
+      where: user ? { user_id: user.id, route } : { route },
     });
 
     const normalPrice = setting ? setting.normal_price_per_kg : (route.includes('ICN') ? 13000 : 9500);
@@ -151,9 +167,23 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
+    const user = await getSessionUser();
+    const existing = await prisma.invoice.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
+    if (user && existing.user_id && existing.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await prisma.invoice.delete({
       where: { id: params.id },
     });

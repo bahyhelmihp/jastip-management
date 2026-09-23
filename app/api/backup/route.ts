@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const settings = await prisma.settings.findMany();
+    const user = await getSessionUser();
+    const userId = user?.id || null;
+
+    const settings = await prisma.settings.findMany({
+      where: { user_id: userId },
+    });
     const invoices = await prisma.invoice.findMany({
+      where: { user_id: userId },
       include: {
         extra_charges: true,
       },
@@ -13,6 +20,7 @@ export async function GET() {
     const backupData = {
       version: 1,
       exportedAt: new Date().toISOString(),
+      user: user ? { email: user.email } : null,
       settings,
       invoices,
     };
@@ -34,6 +42,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getSessionUser();
+    const userId = user?.id || null;
     const body = await request.json();
     const { settings, invoices } = body;
 
@@ -46,15 +56,28 @@ export async function POST(request: Request) {
 
     // Execute restore inside transaction
     await prisma.$transaction(async (tx) => {
-      // 1. Delete existing records
-      await tx.invoiceExtraCharge.deleteMany();
-      await tx.invoice.deleteMany();
-      await tx.settings.deleteMany();
+      // 1. Delete existing records for current user
+      const userInvoices = await tx.invoice.findMany({
+        where: { user_id: userId },
+        select: { id: true },
+      });
+      const invoiceIds = userInvoices.map((i) => i.id);
+
+      await tx.invoiceExtraCharge.deleteMany({
+        where: { invoice_id: { in: invoiceIds } },
+      });
+      await tx.invoice.deleteMany({
+        where: { user_id: userId },
+      });
+      await tx.settings.deleteMany({
+        where: { user_id: userId },
+      });
 
       // 2. Restore settings
       for (const item of settings) {
         await tx.settings.create({
           data: {
+            user_id: userId,
             route: item.route,
             normal_price_per_kg: Number(item.normal_price_per_kg),
             over_5kg_price_per_kg: Number(item.over_5kg_price_per_kg || 0),
@@ -74,7 +97,7 @@ export async function POST(request: Request) {
 
         await tx.invoice.create({
           data: {
-            id: inv.id,
+            user_id: userId,
             invoice_number: inv.invoice_number,
             customer_name: inv.customer_name,
             route: inv.route,
@@ -98,7 +121,6 @@ export async function POST(request: Request) {
             updated_at: inv.updated_at ? new Date(inv.updated_at) : new Date(),
             extra_charges: {
               create: extraCharges.map((ch: any) => ({
-                id: ch.id,
                 name: ch.name,
                 currency: ch.currency,
                 amount: Number(ch.amount),
