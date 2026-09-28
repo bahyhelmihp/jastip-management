@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "service:status": "systemctl --user status jastip-management.service",
+    "service:start": "systemctl --user start jastip-management.service",
+    "service:stop": "systemctl --user stop jastip-management.service",
+    "service:restart": "systemctl --user restart jastip-management.service",
+    "service:logs": "journalctl --user -u jastip-management.service -f"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
